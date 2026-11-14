@@ -1,0 +1,98 @@
+{
+  "id": "alma-sticker-library",
+  "name": "Sticker Library",
+  "version": "0.3.0",
+  "description": "本地表情包管理：导入 AstrBot 格式包、按语境向量检索、体检维护。本地聊天里一步选图并投递到当前回复；外部渠道由 Alma 执行一次发送命令。",
+  "author": {
+    "name": "Alma",
+    "url": "https://github.com/HSJ-BanFan"
+  },
+  "main": "main.js",
+  "engines": {
+    "alma": "^0.1.0"
+  },
+  "type": "tool",
+  "permissions": [
+    "tools:register",
+    "chat:read",
+    "settings:read",
+    "notifications"
+  ],
+  "activationEvents": [
+    "onStartup"
+  ],
+  "contributes": {
+    "tools": [
+      {
+        "id": "sticker_search",
+        "name": "Search Stickers",
+        "description": "按语境检索表情包，返回候选（本地路径 + 图意描述 + 匹配分）。"
+      },
+      {
+        "id": "sticker_pick",
+        "name": "Pick Sticker",
+        "description": "一步拿到最合适的一张表情（本地路径 + 描述），直接可用。"
+      },
+      {
+        "id": "sticker_get",
+        "name": "Get Sticker",
+        "description": "按表情 id 取单张完整信息。"
+      },
+      {
+        "id": "sticker_catalog",
+        "name": "List Sticker Packs",
+        "description": "列出所有表情包、分类分布、图片数量。"
+      },
+      {
+        "id": "sticker_remove",
+        "name": "Remove Sticker Pack",
+        "description": "卸载表情包，默认连磁盘文件一起删。"
+      },
+      {
+        "id": "sticker_health",
+        "name": "Sticker Health Check",
+        "description": "检查完整性：缺失文件、索引漂移。"
+      },
+      {
+        "id": "sticker_gallery",
+        "name": "Open Sticker Gallery",
+        "description": "在本地起一个管理网页：浏览/筛选/上传表情、分类维护、语义化、设置与备份。"
+      },
+      {
+        "id": "sticker_gallery_stop",
+        "name": "Close Sticker Gallery",
+        "description": "关闭本地表情库网页服务。"
+      },
+      {
+        "id": "sticker_gallery_url",
+        "name": "Get Gallery URL",
+        "description": "拿到表情库页面的当前地址。"
+      },
+      {
+        "id": "sticker_community",
+        "name": "Browse Community Packs",
+        "description": "看社区有哪些现成的表情包可选（AstrBot 官方索引）。"
+      },
+      {
+        "id": "sticker_install",
+        "name": "Install Sticker Pack",
+        "description": "装包：社区索引里的、任意 GitHub 仓库、或本地目录。"
+      },
+      {
+        "id": "sticker_update",
+        "name": "Update Sticker Pack",
+        "description": "把已装的包更新到最新版。"
+      }
+    ],
+    "configuration": {
+      "title": "Sticker Library",
+      "properties": {
+        "stickerLibrary.pyPath": {
+          "type": "string",
+          "default": "D:/02_Dev/Tools/Python/cpython-3.12.14-windows-x86_64-none/python.exe",
+          "description": "运行数据层用的 Python 解释器路径。"
+        }
+      }
+    }
+  }
+}

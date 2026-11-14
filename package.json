@@ -1,0 +1,11 @@
+{
+  "name": "alma-sticker-library",
+  "version": "0.3.0",
+  "type": "module",
+  "description": "表情包库：导入、语义检索、本地管理。只管库存，判断和发送交给 Alma 与各渠道工具。",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "bump": "node scripts/bump-cache.mjs"
+  }
+}
