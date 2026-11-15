@@ -55,6 +55,14 @@
   }
 
   async function upload(endpoint, file, extra = {}) {
+    if (endpoint === "settings/backup/import") {
+      const response = await fetch(buildUrl(endpoint, { ...extra, file_name: file?.name || "backup.zip" }), {
+        method: "POST",
+        body: file,
+        headers: { "content-type": "application/octet-stream", accept: "application/json" },
+      });
+      return readResponse(response);
+    }
     const form = new FormData();
     form.append("file", file, file?.name || "upload.bin");
     for (const [key, value] of Object.entries(extra || {})) {

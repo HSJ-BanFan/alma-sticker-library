@@ -228,6 +228,46 @@
   scroll-margin-top: var(--space-20);
 }
 
+.alma-settings-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 200px);
+  align-items: center;
+  gap: 8px 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.alma-settings-field:last-child {
+  border-bottom: 0;
+}
+
+.alma-settings-field > .hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.alma-settings-field input:not([type="checkbox"]),
+.alma-settings-field select,
+.alma-settings-field textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.alma-usage-steps {
+  padding-left: 24px;
+  line-height: 1.9;
+}
+
+.alma-usage-steps li + li {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .alma-settings-field {
+    grid-template-columns: 1fr;
+  }
+}
+
 #config-flow-dialog,
 #rules-flow-dialog {
   width: min(760px, calc(100vw - 32px));

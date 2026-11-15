@@ -1169,8 +1169,8 @@ async function initSettingsPage() {
       title: "恢复全量备份",
       message: `将从「${file.name}」恢复表情包与运行时设置。${
         importOverwriteCheckbox.checked
-          ? "全部现有表情包和描述索引会被备份替换，备份中没有的表情包也会被移除。"
-          : "保留现有表情包，仅添加缺少的表情包；运行时设置仍会从备份恢复。"
+          ? "备份会覆盖已存在的同名表情包，并导入新的表情包；运行时设置会从备份恢复。"
+          : "保留现有同名表情包，仅添加缺少的表情包；运行时设置仍会从备份恢复。"
       }${
         dirty
           ? "\n\n恢复成功后将重新加载规则，当前未保存的规则更改会丢失。"
@@ -1188,26 +1188,20 @@ async function initSettingsPage() {
     importOverwriteCheckbox.disabled = true;
     setPackTransferResult(importResult, "正在恢复备份，请不要关闭页面…");
     try {
-      const bytes = await file.arrayBuffer();
-      let binary = "";
-      const view = new Uint8Array(bytes);
-      const chunkSize = 0x8000;
-      for (let offset = 0; offset < view.length; offset += chunkSize) {
-        const chunk = view.subarray(offset, offset + chunkSize);
-        binary += String.fromCharCode(...chunk);
-      }
-      const response = await apiPost("settings/backup/import", {
+      const response = await window.AstrBotPluginPage.upload("settings/backup/import", file, {
         overwrite: importOverwriteCheckbox.checked,
-        file_name: file.name,
-        file_b64: btoa(binary),
       });
+      const failed = Array.isArray(response?.failed) ? response.failed : [];
+      const skipped = Number(response?.skipped_packs) || 0;
+      const summary = `已恢复 ${response?.restored_packs ?? 0} 个表情包${skipped ? `，保留 ${skipped} 个同名表情包` : ""}`;
+      const failureDetails = failed.map((item) => `${item.pack}: ${item.error}`).join("；");
       setPackTransferResult(
         importResult,
-        `恢复成功：${response?.restored_packs ?? 0} 个表情包`,
-        "success",
+        failed.length ? `${summary}；${failed.length} 个失败：${failureDetails}` : summary,
+        failed.length ? "error" : "success",
       );
       backupFileInput.value = "";
-      addLog(`备份导入成功，恢复 ${response?.restored_packs ?? 0} 个 pack`);
+      addLog(failed.length ? `${summary}；${failureDetails}` : summary, failed.length > 0);
       try {
         await refreshPacksAndRules();
       } catch (refreshError) {

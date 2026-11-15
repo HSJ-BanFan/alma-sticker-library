@@ -5,20 +5,23 @@
  * 旧版 gallery.js 的 /api/catalog、/img 路由保留，避免已有书签失效。
  */
 
-import { copyFileSync, createReadStream, existsSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, createReadStream, createWriteStream, existsSync, rmSync, statSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { dirname, extname, join } from 'node:path';
+import { Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import {
-    MIME, PACKS_DIR, SAFE_ID, ensureDir, fileDataUrl, safeJoin, sha256,
-} from './lib/util.js?v=mwbplvvw';
-import * as store from './lib/store.js?v=mwbplvvw';
-import * as settings from './lib/settings.js?v=mwbplvvw';
-import * as semantic from './lib/semantic.js?v=mwbplvvw';
-import * as community from './lib/community.js?v=mwbplvvw';
-import * as packsio from './lib/packsio.js?v=mwbplvvw';
-import * as indexJob from './lib/index-job.js?v=mwbplvvw';
-import { hybridSearch, retrievalPackIds } from './lib/search.js?v=mwbplvvw';
+    MIME, PACKS_DIR, TMP_DIR, SAFE_ID, ensureDir, fileDataUrl, safeJoin, sha256,
+} from './lib/util.js?v=0.3.1-codex-20261114';
+import * as store from './lib/store.js?v=0.3.1-codex-20261114';
+import * as settings from './lib/settings.js?v=0.3.1-codex-20261114';
+import * as semantic from './lib/semantic.js?v=0.3.1-codex-20261114';
+import * as community from './lib/community.js?v=0.3.1-codex-20261114';
+import * as packsio from './lib/packsio.js?v=0.3.1-codex-20261114';
+import * as indexJob from './lib/index-job.js?v=0.3.1-codex-20261114';
+import { hybridSearch, retrievalPackIds } from './lib/search.js?v=0.3.1-codex-20261114';
 
 const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url));
 const WEBUI_DIR = join(PLUGIN_DIR, 'webui');
@@ -115,6 +118,31 @@ async function readUpload(req) {
     return { multipart: null, buf };
 }
 
+async function readBackupUpload(req) {
+    // The archive implementation supports ZIP32; receive large backups without buffering them.
+    const limit = 0xFFFFFFFE;
+    const tooLarge = () => Object.assign(new Error('备份超过 ZIP32 支持的 4 GiB 上限'), { status: 413 });
+    if (Number(req.headers['content-length']) > limit) throw tooLarge();
+    const dir = ensureDir(join(TMP_DIR, 'backup-uploads'));
+    const path = join(dir, `${randomUUID()}.zip`);
+    let size = 0;
+    const counter = new Transform({
+        transform(chunk, encoding, done) {
+            size += chunk.length;
+            if (size > limit) done(tooLarge());
+            else done(null, chunk);
+        },
+    });
+    try {
+        await pipeline(req, counter, createWriteStream(path, { flags: 'wx' }));
+        if (!size) throw Object.assign(new Error('备份文件为空'), { status: 400 });
+        return path;
+    } catch (err) {
+        try { rmSync(path, { force: true }); } catch { /* 保留原始上传错误 */ }
+        throw err;
+    }
+}
+
 // ------------------------------------------------------------------ 静态页面
 function serveStatic(res, pathname) {
     let rel;
@@ -169,6 +197,10 @@ function staticType(path) {
 }
 
 function serveImage(res, packId, rel) {
+    if (!SAFE_ID.test(packId)) {
+        sendText(res, 400, 'bad pack id');
+        return;
+    }
     const base = join(PACKS_DIR, packId, 'memes');
     const full = safeJoin(base, decodeURIComponent(rel));
     if (!full || !existsSync(full) || !statSync(full).isFile()) {
@@ -377,10 +409,10 @@ async function handleApi(req, res, url) {
     if ((route === 'pick' || route === 'search') && method === 'GET') {
         const ids = pickupPackIds(query);
         const text = String(query.q || '').trim();
-        const topK = Math.max(1, Number(query.top) || 5);
+        const topK = Math.max(1, Number(query.top) || settings.getSetting('semantic.top_k', 8));
         const hits = await hybridSearch(ids, text, {
             topK,
-            minScore: 0.02,
+            minScore: settings.getSetting('semantic.min_score', 0.02),
             category: query.category || null,
             semantic,
         });
@@ -722,9 +754,21 @@ async function handleApi(req, res, url) {
     }
     if (route === 'settings/backup/import' && method === 'POST') {
         const type = String(req.headers['content-type'] || '');
+        if (type.includes('application/octet-stream') || type.includes('application/zip')) {
+            const path = await readBackupUpload(req);
+            try {
+                const result = packsio.importRuntimeBackup(path, {
+                    overwrite: String(query.overwrite || '').toLowerCase() === 'true',
+                    fileName: query.file_name || 'backup.zip',
+                });
+                return sendJson(res, 200, { message: '备份已恢复', ...result });
+            } finally {
+                rmSync(path, { force: true });
+            }
+        }
         let buf;
         let fileName = 'backup.zip';
-        let overwrite = Boolean(query.overwrite);
+        let overwrite = String(query.overwrite || '').toLowerCase() === 'true';
         if (type.includes('multipart/form-data')) {
             const upload = await readUpload(req);
             const file = upload.multipart?.files?.file;
@@ -934,19 +978,20 @@ function createApp() {
                 return serveFile(res, join(WEBUI_DIR, 'bridge.js'));
             }
             if (url.pathname.startsWith('/img/')) {
-                const rest = decodeURIComponent(url.pathname.slice(5));
+                const rest = url.pathname.slice(5);
                 const slash = rest.indexOf('/');
                 if (slash <= 0) return sendText(res, 400, 'bad path');
-                return serveImage(res, rest.slice(0, slash), rest.slice(slash + 1));
+                return serveImage(res, decodeURIComponent(rest.slice(0, slash)), rest.slice(slash + 1));
             }
             if (url.pathname.startsWith('/api/')) {
                 await handleApi(req, res, url);
                 return;
             }
-            if (serveStatic(res, decodeURIComponent(url.pathname))) return;
+            if (serveStatic(res, url.pathname)) return;
             sendText(res, 404, 'not found');
         } catch (err) {
             const status = err?.status
+                || (err instanceof URIError ? 400 : 0)
                 || (err?.code === 'revision_conflict' ? 409 : 0)
                 || (err?.code === 'conflict' || err?.code === 'missing_entry' ? 409 : 0)
                 || (err?.code === 'not_found' || err?.code === 'missing_file' ? 404 : 0)

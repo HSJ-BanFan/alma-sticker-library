@@ -23,23 +23,33 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import * as gallery from './gallery.js?v=mwbplvvw';
-import * as store from './lib/store.js?v=mwbplvvw';
-import * as semantic from './lib/semantic.js?v=mwbplvvw';
-import * as community from './lib/community.js?v=mwbplvvw';
-import * as settings from './lib/settings.js?v=mwbplvvw';
-import { hybridSearch, retrievalPackIds } from './lib/search.js?v=mwbplvvw';
-import { installTurnContext, turnFor } from './lib/turn-context.js?v=mwbplvvw';
-import { deliverPickedSticker } from './lib/pick.js?v=mwbplvvw';
-import { installStickerSkill } from './lib/skill.js?v=mwbplvvw';
+import * as gallery from './gallery.js?v=0.3.1-codex-20261114';
+import * as store from './lib/store.js?v=0.3.1-codex-20261114';
+import * as semantic from './lib/semantic.js?v=0.3.1-codex-20261114';
+import * as community from './lib/community.js?v=0.3.1-codex-20261114';
+import * as settings from './lib/settings.js?v=0.3.1-codex-20261114';
+import { hybridSearch, retrievalPackIds } from './lib/search.js?v=0.3.1-codex-20261114';
+import { installTurnContext, turnFor } from './lib/turn-context.js?v=0.3.1-codex-20261114';
+import { deliverPickedSticker } from './lib/pick.js?v=0.3.1-codex-20261114';
+import { installStickerSkill } from './lib/skill.js?v=0.3.1-codex-20261114';
 
 const DEFAULT_PORT = 8899;
 
-function packIdsFor(args, runtime) {
+async function packIdsFor(args, chat) {
     if (args?.pack) return [String(args.pack)];
-    const preferred = runtime.activePackIds?.length
-        ? runtime.activePackIds
-        : settings.resolvePackIds({});
+    const turn = turnFor(args);
+    const threadId = String(turn?.threadId || '');
+    let personaId = '';
+    if (threadId && chat?.getThread) {
+        try {
+            const thread = await chat.getThread(threadId);
+            personaId = String(
+                thread?.personaId || thread?.metadata?.personaId
+                || thread?.metadata?.persona || '',
+            );
+        } catch { /* 会话读取失败时仍可匹配会话规则 */ }
+    }
+    const preferred = settings.resolvePackIds({ threadId, personaId });
     return retrievalPackIds(preferred);
 }
 
@@ -74,7 +84,6 @@ async function waitInstall(jobId, label = '安装') {
 
 export async function activate(context) {
     const { logger, tools, events, commands, ui, chat } = context;
-    const runtime = { activePackIds: [], threadId: '' };
 
     semantic.configure({ logger });
 
@@ -119,33 +128,6 @@ export async function activate(context) {
         logger.warn?.(`[表情库] 无法记录轮次上下文: ${err.message}`);
     }
 
-    // 工具执行时拿不到 threadId，但 willSend 一定先于模型调用发生，
-    // 这里留一份“当前会话”上下文，让使用规则真正生效。
-    if (events?.on) {
-        try {
-            disposables.push(events.on('chat.message.willSend', async (input) => {
-                runtime.threadId = String(input?.threadId || '');
-                let personaId = '';
-                try {
-                    const thread = runtime.threadId && chat?.getThread
-                        ? await chat.getThread(runtime.threadId)
-                        : null;
-                    personaId = String(
-                        thread?.personaId || thread?.metadata?.personaId
-                        || thread?.metadata?.persona || '',
-                    );
-                } catch { /* 没有 thread 信息就只按会话匹配 */ }
-                const ids = settings.resolvePackIds({
-                    threadId: runtime.threadId,
-                    personaId,
-                });
-                if (ids.length) runtime.activePackIds = ids;
-            }));
-        } catch (err) {
-            logger.warn?.(`[表情库] 监听聊天上下文失败: ${err.message}`);
-        }
-    }
-
     const wrap = (fn) => async (args) => {
         try {
             const result = await fn(args || {});
@@ -165,16 +147,16 @@ export async function activate(context) {
                 query: { type: 'string', description: '语境描述，比如"对方在阴阳我但我懒得吵"' },
                 pack: { type: 'string', description: '限定某个包 id' },
                 category: { type: 'string', description: '限定分类，如 happy / angry / teasing' },
-                top_k: { type: 'number', description: '返回几个候选，默认 8' },
+                top_k: { type: 'integer', minimum: 1, maximum: 30, description: '返回几个候选，留空使用设置中的默认候选数' },
             },
             required: ['query'],
         },
         execute: wrap(async (args) => {
-            const ids = packIdsFor(args, runtime);
+            const ids = await packIdsFor(args, chat);
             const hits = await hybridSearch(ids, args.query, {
-                topK: Number(args.top_k) || 8,
+                topK: Number(args.top_k) || settings.getSetting('semantic.top_k', 8),
                 category: args.category || null,
-                minScore: 0.02,
+                minScore: settings.getSetting('semantic.min_score', 0.02),
                 semantic,
             });
             return hits.map(decorate);
@@ -195,11 +177,11 @@ export async function activate(context) {
             required: ['query'],
         },
         execute: wrap(async (args) => {
-            const ids = packIdsFor(args, runtime);
+            const ids = await packIdsFor(args, chat);
             const hits = await hybridSearch(ids, args.query, {
                 topK: 1,
                 category: args.category || null,
-                minScore: 0.01,
+                minScore: settings.getSetting('semantic.min_score', 0.02),
                 semantic,
             });
             if (!hits.length) return { found: false, reason: '库里没找到贴切的' };
@@ -414,23 +396,25 @@ export async function activate(context) {
 
     if (commands?.register) {
         try {
-            disposables.push(commands.register('stickers', async () => {
-                const found = await gallery.discover();
-                const running = found.running ? found : await gallery.start(DEFAULT_PORT);
-                if (ui?.openExternal) await ui.openExternal(running.url);
-                return { url: running.url };
-            }, {
+            disposables.push(commands.register('stickers', {
                 title: '打开表情包管理',
                 description: '在浏览器打开本地表情包管理页面',
+                handler: async () => {
+                    const found = await gallery.discover();
+                    const running = found.running ? found : await gallery.start(DEFAULT_PORT);
+                    if (ui?.openExternal) await ui.openExternal(running.url);
+                    return { url: running.url };
+                },
             }));
         } catch (err) {
             logger.warn?.(`[表情库] 注册命令失败: ${err.message}`);
         }
 
         try {
-            disposables.push(commands.register('stickers-skill', async () => installStickerSkill(), {
+            disposables.push(commands.register('stickers-skill', {
                 title: '安装表情包技能',
                 description: '把表情包礼仪技能装到 ~/.config/alma/skills/sticker-etiquette/',
+                handler: async () => installStickerSkill(),
             }));
         } catch (err) {
             logger.warn?.(`[表情库] 注册技能命令失败: ${err.message}`);

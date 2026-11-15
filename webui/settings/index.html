@@ -34,35 +34,19 @@
         <nav id="settings-nav" aria-label="设置分类导航">
           <button type="button" data-settings-tab="models" aria-current="page">
             <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i
-            >模式<span class="settings-dirty-dot" hidden></span>
+            >使用方式<span class="settings-dirty-dot" hidden></span>
           </button>
           <button type="button" data-settings-tab="rules">
             <i class="fas fa-route" aria-hidden="true"></i>使用规则
           </button>
-          <button type="button" data-settings-tab="sending">
-            <i class="fas fa-comment-dots" aria-hidden="true"></i>表情发送<span
-              class="settings-dirty-dot"
-              hidden
-            ></span>
-          </button>
-          <button type="button" data-settings-tab="collect">
-            <i class="fas fa-inbox" aria-hidden="true"></i>自动收集<span
-              class="settings-dirty-dot"
-              hidden
-            ></span>
-          </button>
-          <button type="button" data-settings-tab="storage">
-            <i class="fas fa-cloud" aria-hidden="true"></i>存储与下载<span
-              class="settings-dirty-dot"
-              hidden
-            ></span>
-          </button>
-          <button type="button" data-settings-tab="prompts">
-            <i class="fas fa-pen-to-square" aria-hidden="true"></i
-            >提示词模板<span class="settings-dirty-dot" hidden></span>
-          </button>
           <button type="button" data-settings-tab="matching">
-            <i class="fas fa-tags" aria-hidden="true"></i>标签与匹配<span
+            <i class="fas fa-tags" aria-hidden="true"></i>检索与描述<span
+              class="settings-dirty-dot"
+              hidden
+            ></span>
+          </button>
+          <button type="button" data-settings-tab="preview">
+            <i class="fas fa-image" aria-hidden="true"></i>页面预览<span
               class="settings-dirty-dot"
               hidden
             ></span>
@@ -72,7 +56,7 @@
           </button>
         </nav>
         <p class="settings-sidebar-note">
-          从模式流程打开设置，或按分类查找和修改。
+          检索参数、会话规则和图包备份在这里管理。
         </p>
       </aside>
       <div class="settings-content">
@@ -150,86 +134,14 @@
             class="panel selection-mode-panel"
             hidden
           >
-            <fieldset
-              id="selection-mode-options"
-              aria-describedby="selection-mode-help"
-            >
-              <legend>选择模式</legend>
-              <p id="selection-mode-help" class="hint">
-                一次使用一种模式。切换后可调整流程中的设置，保存并应用后生效。
-              </p>
-              <div class="selection-mode-grid">
-                <label class="selection-mode-card">
-                  <input
-                    type="radio"
-                    name="selection-mode"
-                    value="category-native"
-                  />
-                  <span
-                    ><strong>原生分类标签</strong
-                    ><small
-                      >回复模型输出分类标签，从该分类中随机取图。</small
-                    ></span
-                  >
-                </label>
-                <label class="selection-mode-card">
-                  <input
-                    type="radio"
-                    name="selection-mode"
-                    value="category-auxiliary"
-                  />
-                  <span
-                    ><strong>辅助模型分类标签</strong
-                    ><small
-                      >辅助模型根据回复选择分类，再从分类中随机取图。</small
-                    ></span
-                  >
-                </label>
-                <label class="selection-mode-card">
-                  <input
-                    type="radio"
-                    name="selection-mode"
-                    value="semantic-tool"
-                  />
-                  <span
-                    ><strong>Tool 语义检索</strong
-                    ><small
-                      >回复模型调用搜索工具，从候选中选择具体图片。</small
-                    ></span
-                  >
-                </label>
-                <label class="selection-mode-card">
-                  <input
-                    type="radio"
-                    name="selection-mode"
-                    value="semantic-auxiliary"
-                  />
-                  <span
-                    ><strong>辅助模型语义检索</strong
-                    ><small
-                      >辅助模型根据回复检索并选图，回复模型专注对话。</small
-                    ></span
-                  >
-                </label>
-              </div>
-            </fieldset>
-            <p
-              id="selection-mode-status"
-              class="selection-mode-status"
-              role="status"
-            ></p>
-            <div id="selection-mode-readiness" class="config-notice" hidden>
-              <p id="selection-mode-readiness-text" role="status"></p>
-              <p class="hint">
-                按各会话实际使用的表情包判断；语义数据或索引未就绪时，自动回退到对应的分类标签方式。
-              </p>
-              <a
-                href="../semantic/index.html"
-                data-nav-target="../semantic/index.html"
-                >前往语义化 →</a
-              >
-            </div>
-            <p id="selection-mode-detail" class="hint"></p>
+            <h3>由 Alma 决定如何配图</h3>
+            <ol class="alma-usage-steps">
+              <li><strong>按会话选包。</strong>使用规则决定当前聊天可以检索哪些表情包。</li>
+              <li><strong>按语境检索。</strong>有可用向量时进行语义匹配；关闭向量或索引未就绪时使用描述、关键词和分类。</li>
+              <li><strong>选择与发送。</strong>Alma 可以只检索候选，也可以直接选图发送到当前聊天。</li>
+            </ol>
+            <p class="hint">在表情包管理页面添加图片，在语义化页面生成描述。配图时机由 Alma 根据对话判断。</p>
+            <a href="#matching">调整检索与描述设置 →</a>
           </section>
           <section
             id="mode-workflow"
@@ -325,7 +237,7 @@
           </section>
           <div id="config-sections"></div>
           <p id="config-search-empty" class="rules-placeholder" hidden>
-            没有找到相关配置，试试“模型”“概率”或“图床”。
+            没有找到相关配置，试试“模型”“候选”或“分类”。
           </p>
           <div class="config-save-bar">
             <div>
@@ -584,7 +496,7 @@
               <label class="checkbox">
                 <input id="import-overwrite-checkbox" type="checkbox" />
                 <span
-                  >以备份替换全部表情包（备份中没有的表情包也会被移除）</span
+                  >覆盖备份中的同名表情包</span
                 >
               </label>
               <button id="import-backup-btn" class="danger">
