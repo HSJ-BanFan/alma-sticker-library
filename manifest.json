@@ -1,7 +1,7 @@
 {
   "id": "alma-sticker-library",
   "name": "Sticker Library",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "本地表情包管理：导入 AstrBot 格式包、按语境向量检索、体检维护。本地聊天里一步选图并投递到当前回复；外部渠道由 Alma 执行一次发送命令。",
   "author": {
     "name": "Alma",

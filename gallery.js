@@ -14,14 +14,14 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import {
     MIME, PACKS_DIR, TMP_DIR, SAFE_ID, ensureDir, fileDataUrl, safeJoin, sha256,
-} from './lib/util.js?v=0.3.1-codex-20261114';
-import * as store from './lib/store.js?v=0.3.1-codex-20261114';
-import * as settings from './lib/settings.js?v=0.3.1-codex-20261114';
-import * as semantic from './lib/semantic.js?v=0.3.1-codex-20261114';
-import * as community from './lib/community.js?v=0.3.1-codex-20261114';
-import * as packsio from './lib/packsio.js?v=0.3.1-codex-20261114';
-import * as indexJob from './lib/index-job.js?v=0.3.1-codex-20261114';
-import { hybridSearch, retrievalPackIds } from './lib/search.js?v=0.3.1-codex-20261114';
+} from './lib/util.js?v=0.3.2-1';
+import * as store from './lib/store.js?v=0.3.2-1';
+import * as settings from './lib/settings.js?v=0.3.2-1';
+import * as semantic from './lib/semantic.js?v=0.3.2-1';
+import * as community from './lib/community.js?v=0.3.2-1';
+import * as packsio from './lib/packsio.js?v=0.3.2-1';
+import * as indexJob from './lib/index-job.js?v=0.3.2-1';
+import { hybridSearch, retrievalPackIds } from './lib/search.js?v=0.3.2-1';
 
 const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url));
 const WEBUI_DIR = join(PLUGIN_DIR, 'webui');

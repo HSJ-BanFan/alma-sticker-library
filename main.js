@@ -23,15 +23,15 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import * as gallery from './gallery.js?v=0.3.1-codex-20261114';
-import * as store from './lib/store.js?v=0.3.1-codex-20261114';
-import * as semantic from './lib/semantic.js?v=0.3.1-codex-20261114';
-import * as community from './lib/community.js?v=0.3.1-codex-20261114';
-import * as settings from './lib/settings.js?v=0.3.1-codex-20261114';
-import { hybridSearch, retrievalPackIds } from './lib/search.js?v=0.3.1-codex-20261114';
-import { installTurnContext, turnFor } from './lib/turn-context.js?v=0.3.1-codex-20261114';
-import { deliverPickedSticker } from './lib/pick.js?v=0.3.1-codex-20261114';
-import { installStickerSkill } from './lib/skill.js?v=0.3.1-codex-20261114';
+import * as gallery from './gallery.js?v=0.3.2-1';
+import * as store from './lib/store.js?v=0.3.2-1';
+import * as semantic from './lib/semantic.js?v=0.3.2-1';
+import * as community from './lib/community.js?v=0.3.2-1';
+import * as settings from './lib/settings.js?v=0.3.2-1';
+import { hybridSearch, retrievalPackIds } from './lib/search.js?v=0.3.2-1';
+import { installTurnContext, turnFor } from './lib/turn-context.js?v=0.3.2-1';
+import { deliverPickedSticker } from './lib/pick.js?v=0.3.2-1';
+import { installStickerSkill } from './lib/skill.js?v=0.3.2-1';
 
 const DEFAULT_PORT = 8899;
 
